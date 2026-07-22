@@ -978,6 +978,7 @@ void TcpConnectionImpl::sendAsyncDataInLoop(const BufferNodePtr &node,
     {
         if (len > 0)
         {
+            const auto previousRemainingBytes = node->remainingBytes();
             if (!writeBufferList_.empty() && node == writeBufferList_.front() &&
                 node->remainingBytes() == 0)
             {
@@ -995,6 +996,14 @@ void TcpConnectionImpl::sendAsyncDataInLoop(const BufferNodePtr &node,
             else
             {
                 node->append(data, len);
+            }
+            const auto remainingBytes = node->remainingBytes();
+            if (highWaterMarkCallback_ &&
+                previousRemainingBytes <=
+                    static_cast<long long>(highWaterMarkLen_) &&
+                remainingBytes > static_cast<long long>(highWaterMarkLen_))
+            {
+                highWaterMarkCallback_(shared_from_this(), remainingBytes);
             }
         }
     }
